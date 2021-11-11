@@ -5,8 +5,18 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+/**
+ *
+ * MEMBERSHIPS
+ *
+ * written with <3 by R Group, working with Rarible DAO
+ *
+ */
+
 contract Memberships is ERC721, Ownable {
     using Counters for Counters.Counter;
+    
+    //===== Interfaces =====//
 
     struct TokenData {
         uint256 id;
@@ -15,6 +25,9 @@ contract Memberships is ERC721, Ownable {
         string organization;
         string tokenName;
     }
+
+
+    //===== State =====//
 
     // Organization name
     string private _organization;
@@ -29,22 +42,14 @@ contract Memberships is ERC721, Ownable {
     // URIs
     mapping(uint256 => string) private _uris;
 
+    //===== Constructor =====//
+
     constructor(string memory name_, string memory symbol_, string memory organization_) ERC721(name_, symbol_) {
         _organization = organization_;
     }
 
-    function _mint(address to, string calldata nickName) internal {
-        uint256 tokenId = _counter.current();
-        _nickNames[tokenId] = nickName;
-        _uris[tokenId] = "placeholder";
-        _safeMint(to, tokenId);
-        _counter.increment();
-    }
 
-    function mint(address to, string calldata nickName) public onlyOwner {
-        require(to != address(0), "Tried to mint to 0 address");
-        _mint(to, nickName);
-    }
+    //===== External Functions =====//
 
     function batchMint(address[] calldata toAddresses, string[] calldata nickNames) external onlyOwner {
         require(toAddresses.length == nickNames.length, "Array length mismatch");
@@ -64,6 +69,14 @@ contract Memberships is ERC721, Ownable {
         }
     }
 
+
+    //===== Public Functions =====//
+
+    function mint(address to, string calldata nickName) public onlyOwner {
+        require(to != address(0), "Tried to mint to 0 address");
+        _mint(to, nickName);
+    }
+
     function organization() public view returns (string memory) {
         return _organization;
     }
@@ -76,6 +89,7 @@ contract Memberships is ERC721, Ownable {
         return _counter.current() - 1;
     }
 
+    // Useful to get token info if tokenURI returns an SVG
     function tokenDataOf(uint256 tokenId) public view returns (TokenData memory) {
         TokenData memory tokenData = TokenData(
             tokenId,
@@ -90,6 +104,22 @@ contract Memberships is ERC721, Ownable {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), "Nonexistent token");
         return _uris[tokenId];
+    }
+
+    // All transfers DISABLED (contract will still emit standard transfer event on mint)
+    // TODO we probably don't need to disable _transfer if we disable this, but I'm not 100% sure
+    function approve(address to, uint256 tokenId) public override {
+        require(false == true, "Memberships cannot be approved for transfer");
+    }
+
+    //===== Internal Functions =====//
+
+    function _mint(address to, string calldata nickName) internal {
+        uint256 tokenId = _counter.current();
+        _nickNames[tokenId] = nickName;
+        _uris[tokenId] = "placeholder";
+        _safeMint(to, tokenId);
+        _counter.increment();
     }
 
     // All transfers DISABLED (contract will still emit standard transfer event on mint)
