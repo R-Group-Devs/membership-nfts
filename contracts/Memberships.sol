@@ -107,7 +107,6 @@ contract Memberships is ERC721, Ownable {
     }
 
     // All transfers DISABLED (contract will still emit standard transfer event on mint)
-    // TODO we probably don't need to disable _transfer if we disable this, but I'm not 100% sure
     function approve(address to, uint256 tokenId) public override {
         require(false == true, "Memberships cannot be approved for transfer");
     }
@@ -123,6 +122,7 @@ contract Memberships is ERC721, Ownable {
     }
 
     // All transfers DISABLED (contract will still emit standard transfer event on mint)
+    /*
     function _transfer(
         address from,
         address to,
@@ -130,4 +130,5 @@ contract Memberships is ERC721, Ownable {
     ) internal pure override {
         require(false == true, "Memberships cannot be transferred");
     }
+    */
 }
