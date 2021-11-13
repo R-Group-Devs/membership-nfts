@@ -28,17 +28,10 @@ contract Memberships is ERC721, Ownable {
 
     //===== State =====//
 
-    // Organization name
     string private _organization;
-
-    // Nicknames
     mapping(uint256 => string) private _nickNames;
-
-    // Token counter
     Counters.Counter private _counter;
-
     // TODO make these simple, cool SVGs that integrate that organzation, token name, and owner nick name
-    // URIs
     mapping(uint256 => string) private _uris;
 
     //===== Constructor =====//
