@@ -9,13 +9,13 @@ import "@openzeppelin/contracts/utils/Counters.sol";
  *
  * MEMBERSHIPS
  *
- * written with <3 by R Group, working with Rarible DAO
+ * written with <3 by Ezra Weller and R Group, working with Rarible DAO
  *
  */
 
 contract Memberships is ERC721, Ownable {
     using Counters for Counters.Counter;
-    
+
     //===== Interfaces =====//
 
     struct TokenData {
@@ -25,7 +25,6 @@ contract Memberships is ERC721, Ownable {
         string organization;
         string tokenName;
     }
-
 
     //===== State =====//
 
@@ -44,36 +43,47 @@ contract Memberships is ERC721, Ownable {
 
     //===== Constructor =====//
 
-    constructor(string memory name_, string memory symbol_, string memory organization_) ERC721(name_, symbol_) {
+    constructor(
+        string memory name_,
+        string memory symbol_,
+        string memory organization_,
+        address owner
+    ) ERC721(name_, symbol_) Ownable() {
         _organization = organization_;
+        _counter.increment();
+        transferOwnership(owner);
     }
-
 
     //===== External Functions =====//
 
-    function batchMint(address[] calldata toAddresses, string[] calldata nickNames) external onlyOwner {
-        require(toAddresses.length == nickNames.length, "Array length mismatch");
-        for(uint256 i = 0; i < toAddresses.length; i++) {
+    function batchMint(
+        address[] calldata toAddresses,
+        string[] calldata nickNames
+    ) external onlyOwner {
+        require(
+            toAddresses.length == nickNames.length,
+            "Memberships: Array length mismatch"
+        );
+        for (uint256 i = 0; i < toAddresses.length; i++) {
             _mint(toAddresses[i], nickNames[i]);
         }
     }
 
     function burn(uint256 tokenId) external onlyOwner {
-        require(_exists(tokenId), "Nonexistent token");
+        require(_exists(tokenId), "Memberships: Non-existent token");
         _burn(tokenId);
     }
 
     function batchBurn(uint256[] calldata tokenIds) external onlyOwner {
-        for(uint256 i = 0; i < tokenIds.length; i++) {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(_exists(tokenIds[i]), "Memberships: Non-existent token");
             _burn(tokenIds[i]);
         }
     }
 
-
     //===== Public Functions =====//
 
     function mint(address to, string calldata nickName) public onlyOwner {
-        require(to != address(0), "Tried to mint to 0 address");
         _mint(to, nickName);
     }
 
@@ -90,7 +100,11 @@ contract Memberships is ERC721, Ownable {
     }
 
     // Useful to get token info if tokenURI returns an SVG
-    function tokenDataOf(uint256 tokenId) public view returns (TokenData memory) {
+    function tokenDataOf(uint256 tokenId)
+        public
+        view
+        returns (TokenData memory)
+    {
         TokenData memory tokenData = TokenData(
             tokenId,
             ownerOf(tokenId),
@@ -101,14 +115,19 @@ contract Memberships is ERC721, Ownable {
         return tokenData;
     }
 
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        require(_exists(tokenId), "Nonexistent token");
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        returns (string memory)
+    {
+        require(_exists(tokenId), "Memberships: non-existent token");
         return _uris[tokenId];
     }
 
-    // All transfers DISABLED (contract will still emit standard transfer event on mint)
+    // All transfers DISABLED (contract will still emit standard transfer event on mint and burn)
     function approve(address to, uint256 tokenId) public override {
-        require(false == true, "Memberships cannot be approved for transfer");
+        require(false == true, "Memberships: cannot be approved for transfer");
     }
 
     //===== Internal Functions =====//
@@ -121,14 +140,12 @@ contract Memberships is ERC721, Ownable {
         _counter.increment();
     }
 
-    // All transfers DISABLED (contract will still emit standard transfer event on mint)
-    /*
+    // All transfers DISABLED (contract will still emit standard transfer event on mint and burn)
     function _transfer(
         address from,
         address to,
         uint256 tokenId
     ) internal pure override {
-        require(false == true, "Memberships cannot be transferred");
+        require(false == true, "Memberships: cannot be transferred");
     }
-    */
 }

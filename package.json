@@ -9,8 +9,10 @@
     "node": ">=14.0.0"
   },
   "scripts": {
-    "test": "hardhat test",
-    "test:coverage": "hardhat coverage",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "test": "yarn lint && hardhat test",
+    "test:coverage": "yarn lint && hardhat coverage",
     "clean": "hardhat clean && rm -rf ./cache ./coverage",
     "build": "hardhat compile",
     "deploy": "hardhat run scripts/deploy.ts",
