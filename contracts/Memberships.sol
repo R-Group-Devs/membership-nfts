@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import {NFTDescriptor} from "./NFTDescriptor.sol";
 
 /**
  *
@@ -31,8 +32,6 @@ contract Memberships is ERC721, Ownable {
     string private _organization;
     mapping(uint256 => string) private _nickNames;
     Counters.Counter private _counter;
-    // TODO make these simple, cool SVGs that integrate that organzation, token name, and owner nick name
-    mapping(uint256 => string) private _uris;
 
     //===== Constructor =====//
 
@@ -92,7 +91,6 @@ contract Memberships is ERC721, Ownable {
         return _counter.current() - 1;
     }
 
-    // Useful to get token info if tokenURI returns an SVG
     function tokenDataOf(uint256 tokenId)
         public
         view
@@ -115,11 +113,19 @@ contract Memberships is ERC721, Ownable {
         returns (string memory)
     {
         require(_exists(tokenId), "Memberships: non-existent token");
-        return _uris[tokenId];
+        NFTDescriptor.TokenURIParams memory params = NFTDescriptor
+            .TokenURIParams(
+                tokenId,
+                ownerOf(tokenId),
+                nickNameOf(tokenId),
+                organization(),
+                name()
+            );
+        return NFTDescriptor.constructTokenURI(params);
     }
 
     // All transfers DISABLED (contract will still emit standard transfer event on mint and burn)
-    function approve(address to, uint256 tokenId) public override {
+    function approve(address to, uint256 tokenId) public pure override {
         require(false == true, "Memberships: cannot be approved for transfer");
     }
 
@@ -128,7 +134,6 @@ contract Memberships is ERC721, Ownable {
     function _mint(address to, string calldata nickName) internal {
         uint256 tokenId = _counter.current();
         _nickNames[tokenId] = nickName;
-        _uris[tokenId] = "placeholder";
         _safeMint(to, tokenId);
         _counter.increment();
     }

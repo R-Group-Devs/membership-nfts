@@ -20,7 +20,8 @@
     "verify": "hardhat verify"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "4.3.2"
+    "@openzeppelin/contracts": "4.3.2",
+    "base64-sol": "^1.1.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",

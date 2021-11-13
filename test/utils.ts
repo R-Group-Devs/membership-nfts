@@ -25,9 +25,12 @@ async function checkMint(
   assert.equal(tokenData.nickName, nickName, `nickName`);
   assert.equal(tokenData.organization, organization, `organization`);
   assert.equal(tokenData.tokenName, tokenName, `token name`);
-  // check the URI
+  // TODO check the URI
   const tokenURI = await memberships.tokenURI(tokenId);
-  assert.equal(tokenURI, URI, `URI`);
+  const [, jsonBase64] = tokenURI.split(",");
+  const json = Buffer.from(jsonBase64, "base64").toString();
+  const [, imageBase64] = JSON.parse(json).image.split(",");
+  const svg = Buffer.from(imageBase64, "base64").toString();
 }
 
 export async function mintAndCheck(
