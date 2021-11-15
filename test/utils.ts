@@ -31,6 +31,7 @@ async function checkMint(
   const json = Buffer.from(jsonBase64, "base64").toString();
   const [, imageBase64] = JSON.parse(json).image.split(",");
   const svg = Buffer.from(imageBase64, "base64").toString();
+  assert.equal(typeof svg, "string", `svg`);
 }
 
 export async function mintAndCheck(
