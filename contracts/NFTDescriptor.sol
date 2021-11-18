@@ -22,8 +22,8 @@ library NFTDescriptor {
     /**
      * @notice Construct an ERC721 token URI.
      */
-    function constructTokenURI(TokenURIParams calldata params)
-        public
+    function constructTokenURI(TokenURIParams memory params)
+        internal
         pure
         returns (string memory)
     {
@@ -96,7 +96,7 @@ library NFTDescriptor {
             );
     }
 
-    function buildOutput(TokenURIParams calldata params)
+    function buildOutput(TokenURIParams memory params)
         internal
         pure
         returns (string memory)

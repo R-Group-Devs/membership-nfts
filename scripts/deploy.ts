@@ -1,25 +1,40 @@
-import { ethers } from "hardhat";
-import {
-  Memberships,
-  Memberships__factory,
-  NFTDescriptor__factory,
-} from "../typechain";
+import { ethers, network } from "hardhat";
+import { readFileSync, writeFileSync } from "fs";
+import { keccak256 } from "@ethersproject/keccak256";
+import { Memberships__factory } from "../typechain";
+import args from "./membershipsArgs.json";
+import { Deployment } from "./types";
 
 async function main() {
   const accounts = await ethers.getSigners();
-  const nFactory = new NFTDescriptor__factory(accounts[0]);
-  const nftDescriptor = await nFactory.deploy();
-  const mFactory = new Memberships__factory(
-    { "contracts/NFTDescriptor.sol:NFTDescriptor": nftDescriptor.address },
-    accounts[0]
+  const deployments = JSON.parse(
+    readFileSync(`${__dirname}/../deployments/${network.name}.json`, "utf8")
   );
+  const mFactory = new Memberships__factory(accounts[0]);
+  const byteHash = keccak256(Memberships__factory.bytecode);
+  let owner = args.owner;
+  if (owner === "") owner = await accounts[0].getAddress();
   const memberships = await mFactory.deploy(
-    "OG",
-    "MSHP",
-    "R Group",
-    await accounts[0].getAddress()
+    args.name,
+    args.symbol,
+    args.organization,
+    owner
   );
   await memberships.deployed();
+  const deployment: Deployment = {
+    address: memberships.address,
+    args: {
+      name: args.name,
+      symbol: args.symbol,
+      organization: args.organization,
+      owner,
+    },
+  };
+  deployments[byteHash] = deployment;
+  writeFileSync(
+    `${__dirname}/../deployments/${network.name}.json`,
+    JSON.stringify(deployments)
+  );
   console.log(`🚀 Memberships has been deployed to: ${memberships.address}`);
 }
 

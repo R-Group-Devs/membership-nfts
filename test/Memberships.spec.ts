@@ -2,11 +2,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import {
-  Memberships,
-  Memberships__factory,
-  NFTDescriptor__factory,
-} from "../typechain";
+import { Memberships, Memberships__factory } from "../typechain";
 import {
   tokenName,
   tokenSymbol,
@@ -26,12 +22,7 @@ describe("Memberships", () => {
 
   beforeEach(async () => {
     accounts = await ethers.getSigners();
-    const nFactory = new NFTDescriptor__factory(accounts[0]);
-    const nftDescriptor = await nFactory.deploy();
-    const mFactory = new Memberships__factory(
-      { "contracts/NFTDescriptor.sol:NFTDescriptor": nftDescriptor.address },
-      accounts[0]
-    );
+    const mFactory = new Memberships__factory(accounts[0]);
     memberships = await mFactory.deploy(
       tokenName,
       tokenSymbol,
