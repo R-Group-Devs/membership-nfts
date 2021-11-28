@@ -10,12 +10,17 @@ Testnet phase
 - [x] Try verifying testnet on etherscan
 - [x] Try interacting with the contract via etherscan
 
-Polygon
+Polygon initial
 
 - [x] Deploy to polygon with R Group multisig as owner
 - [x] Verify on etherscan equivalent
 - [x] Use multisig to mint NFTs for R Group members
 - [x] Swap snapshot strategy to membership NFTs
+
+Factory + frontend
+
+- [ ] Frontend deploys a new memberships contract (polygon only)
+- [ ] Frontend displays memberships
 
 Mainnet
 
