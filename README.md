@@ -12,14 +12,14 @@ Testnet phase
 
 Polygon
 
-- [] Deploy to polygon with R Group multisig as owner
-- [] Verify on etherscan equivalent?
-- [] Use multisig to mint NFTs for R Group members
-- [] Swap snapshot strategy to membership NFTs
+- [x] Deploy to polygon with R Group multisig as owner
+- [x] Verify on etherscan equivalent
+- [x] Use multisig to mint NFTs for R Group members
+- [x] Swap snapshot strategy to membership NFTs
 
 Mainnet
 
-- [] Deploy on mainnet with Rarible DAO multisig as owner
-- [] Verify on etherscan
-- [] Use multisig to mint NFTs to initial holders
-- [] Swap snapshot strategy membership NFTs (or memberships + RARI)
+- [ ] Deploy on mainnet with Rarible DAO multisig as owner
+- [ ] Verify on etherscan
+- [ ] Use multisig to mint NFTs to initial holders
+- [ ] Swap snapshot strategy membership NFTs (or memberships + RARI)
