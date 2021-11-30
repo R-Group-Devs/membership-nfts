@@ -2,11 +2,17 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Memberships, Memberships__factory } from "../typechain";
+import { Memberships } from "../typechain/Memberships";
+import { MembershipsFactory } from "../typechain/MembershipsFactory";
+import {
+  MembershipsFactory__factory,
+  Memberships__factory,
+} from "../typechain";
 import {
   tokenName,
   tokenSymbol,
   organization,
+  transferable,
   mintAndCheck,
   batchMintAndCheck,
   burnAndCheck,
@@ -15,22 +21,42 @@ import {
 
 const { AddressZero } = ethers.constants;
 
+/**
+ * TODO
+ * - test createMemberships, including all options
+ * - test toggleTransferable
+ * - test transfer / approve / safeTransfer when transferable is active
+ * - verify mintedTo
+ */
+
 describe("Memberships", () => {
   let accounts: SignerWithAddress[];
+  let factory: MembershipsFactory;
   let memberships: Memberships;
   let wrongOwnerM: Memberships;
 
   beforeEach(async () => {
     accounts = await ethers.getSigners();
-    const mFactory = new Memberships__factory(accounts[0]);
-    memberships = await mFactory.deploy(
+    const fFactory = new MembershipsFactory__factory(accounts[0]);
+    factory = await fFactory.deploy();
+    await factory.deployed();
+    const tx = await factory.createMemberships(
       tokenName,
       tokenSymbol,
       organization,
-      await accounts[0].getAddress()
+      transferable,
+      await accounts[1].getAddress()
     );
-    wrongOwnerM = memberships.connect(await accounts[1].getAddress());
+    const res = await tx.wait();
+    let address: string;
+    if (!res.events) throw new Error("No event");
+    address = res.events[2].args?.address_;
+    const mFactory = new Memberships__factory(accounts[1]);
+    memberships = mFactory.attach(address);
+    wrongOwnerM = memberships.connect(await accounts[0].getAddress());
   });
+
+  describe("create new memberships", async () => {});
 
   describe("mint", () => {
     it("owner can mint", async () => {
@@ -128,7 +154,7 @@ describe("Memberships", () => {
         memberships
       );
       await expect(
-        wrongOwnerM.burn(await memberships.lastId())
+        wrongOwnerM.burn((await memberships.nextId()).sub(1))
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
@@ -164,7 +190,7 @@ describe("Memberships", () => {
         addresses,
         memberships
       );
-      const lastTokenId = await memberships.lastId();
+      const lastTokenId = (await memberships.nextId()).sub(1);
       const tokenIds: BigNumber[] = [];
       for (let i = 0; i < addresses.length; i++) {
         tokenIds.push(lastTokenId.sub(i));
@@ -181,15 +207,15 @@ describe("Memberships", () => {
       await expect(
         memberships.approve(
           await accounts[1].getAddress(),
-          await memberships.lastId()
+          (await memberships.nextId()).sub(1)
         )
-      ).to.be.revertedWith("Memberships: cannot be approved for transfer");
+      ).to.be.revertedWith("Memberships: not transferable");
     });
 
     it("doesn't allow transferFrom", async () => {
       const aliceAddr = await accounts[0].getAddress();
       await mintAndCheck("Alice", aliceAddr, memberships);
-      const tokenId = await memberships.lastId();
+      const tokenId = (await memberships.nextId()).sub(1);
 
       await expect(
         memberships.transferFrom(
@@ -197,7 +223,7 @@ describe("Memberships", () => {
           await accounts[1].getAddress(),
           tokenId
         )
-      ).to.be.revertedWith("Memberships: cannot be transferred");
+      ).to.be.revertedWith("Memberships: not transferable");
     });
   });
 });

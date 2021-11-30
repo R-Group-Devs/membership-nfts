@@ -2,7 +2,7 @@ export interface ConstructorArguments {
   name: string;
   symbol: string;
   organization: string;
-  owner: string;
+  transferable: boolean;
 }
 
 export interface Deployment {

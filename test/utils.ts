@@ -1,12 +1,12 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { expect, assert } from "chai";
 import { ethers } from "hardhat";
-import { Memberships } from "../typechain";
+import { Memberships } from "../typechain/Memberships";
 
 export const tokenName = "Token";
 export const tokenSymbol = "TKN";
 export const organization = "R Group";
-const URI = "placeholder";
+export const transferable = false;
 
 async function checkMint(
   balance1: BigNumber,
@@ -39,13 +39,13 @@ export async function mintAndCheck(
   to: string,
   memberships: Memberships
 ) {
-  const lastTokenId = await memberships.lastId();
+  const nextTokenId = await memberships.nextId();
   const balance1 = await memberships.balanceOf(to);
   // check mint and Transfer event
   await expect(memberships.mint(to, nickName))
     .to.emit(memberships, "Transfer")
-    .withArgs(ethers.constants.AddressZero, to, lastTokenId.add(1));
-  await checkMint(balance1, to, nickName, memberships, lastTokenId.add(1));
+    .withArgs(ethers.constants.AddressZero, to, nextTokenId);
+  await checkMint(balance1, to, nickName, memberships, nextTokenId);
 }
 
 export async function batchMintAndCheck(
@@ -53,20 +53,20 @@ export async function batchMintAndCheck(
   tos: string[],
   memberships: Memberships
 ) {
-  const lastTokenId = await memberships.lastId();
-  const firstTokenId = lastTokenId.add(1);
+  const nextTokenId = await memberships.nextId();
   const balances1: BigNumber[] = [];
   for (let i = 0; i < nickNames.length; i++) {
     balances1[i] = await memberships.balanceOf(tos[i]);
   }
-  await memberships.batchMint(tos, nickNames);
+  const tx = await memberships.batchMint(tos, nickNames);
+  await tx.wait();
   for (let i = 0; i < nickNames.length; i++) {
     await checkMint(
       balances1[i],
       tos[i],
       nickNames[i],
       memberships,
-      firstTokenId.add(i)
+      nextTokenId.add(i)
     );
   }
 }
@@ -86,10 +86,10 @@ export async function burnAndCheck(
   memberships: Memberships
 ) {
   await mintAndCheck(nickName, address, memberships);
-  const tokenId = await memberships.lastId();
-  await expect(memberships.burn(tokenId))
+  const tokenId = await memberships.nextId();
+  await expect(memberships.burn(tokenId.sub(1)))
     .to.emit(memberships, "Transfer")
-    .withArgs(address, ethers.constants.AddressZero, tokenId);
+    .withArgs(address, ethers.constants.AddressZero, tokenId.sub(1));
   await checkBurn(tokenId, memberships);
 }
 
@@ -99,10 +99,10 @@ export async function batchBurnAndCheck(
   memberships: Memberships
 ) {
   await batchMintAndCheck(nickNames, tos, memberships);
-  const lastTokenId = await memberships.lastId();
+  const nextTokenId = await memberships.nextId();
   const tokenIds: BigNumber[] = [];
   for (let i = 0; i < tos.length; i++) {
-    tokenIds.push(lastTokenId.sub(i));
+    tokenIds.push(nextTokenId.sub(i + 1));
   }
   await memberships.batchBurn(tokenIds);
   for (let i = 0; i < tos.length; i++) {

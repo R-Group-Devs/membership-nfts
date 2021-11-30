@@ -1,9 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {NFTDescriptor} from "./NFTDescriptor.sol";
 
 /**
@@ -14,37 +15,31 @@ import {NFTDescriptor} from "./NFTDescriptor.sol";
  *
  */
 
-contract Memberships is ERC721, Ownable {
+contract Memberships is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     using Counters for Counters.Counter;
+
+    //===== State =====//
+
+    string internal _organization;
+    bool internal _transferable;
+    mapping(uint256 => string) internal _nickNames;
+    mapping(uint256 => address) internal _mintedTo;
+    Counters.Counter internal _counter;
 
     //===== Interfaces =====//
 
     struct TokenData {
         uint256 id;
         address owner;
+        address mintedTo;
         string nickName;
         string organization;
         string tokenName;
     }
 
-    //===== State =====//
+    //===== Events =====//
 
-    string private _organization;
-    mapping(uint256 => string) private _nickNames;
-    Counters.Counter private _counter;
-
-    //===== Constructor =====//
-
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        string memory organization_,
-        address owner
-    ) ERC721(name_, symbol_) Ownable() {
-        _organization = organization_;
-        _counter.increment();
-        transferOwnership(owner);
-    }
+    event ToggleTransferable(bool transferable);
 
     //===== External Functions =====//
 
@@ -73,7 +68,33 @@ contract Memberships is ERC721, Ownable {
         }
     }
 
+    function toggleTransferable() external onlyOwner returns (bool) {
+        if (_transferable) {
+            _transferable = false;
+        } else {
+            _transferable = true;
+        }
+        emit ToggleTransferable(_transferable);
+        return _transferable;
+    }
+
     //===== Public Functions =====//
+
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        string memory organization_,
+        bool transferable_,
+        address owner
+    ) public initializer {
+        __ERC721_init(name_, symbol_);
+        __Ownable_init();
+        _organization = organization_;
+        _transferable = transferable_;
+        if (msg.sender != owner) {
+            transferOwnership(owner);
+        }
+    }
 
     function mint(address to, string calldata nickName) public onlyOwner {
         _mint(to, nickName);
@@ -83,12 +104,20 @@ contract Memberships is ERC721, Ownable {
         return _organization;
     }
 
+    function transferable() public view returns (bool) {
+        return _transferable;
+    }
+
+    function mintedTo(uint256 tokenId) public view returns (address) {
+        return _mintedTo[tokenId];
+    }
+
     function nickNameOf(uint256 tokenId) public view returns (string memory) {
         return _nickNames[tokenId];
     }
 
-    function lastId() public view returns (uint256) {
-        return _counter.current() - 1;
+    function nextId() public view returns (uint256) {
+        return _counter.current();
     }
 
     function tokenDataOf(uint256 tokenId)
@@ -99,6 +128,7 @@ contract Memberships is ERC721, Ownable {
         TokenData memory tokenData = TokenData(
             tokenId,
             ownerOf(tokenId),
+            mintedTo(tokenId),
             nickNameOf(tokenId),
             organization(),
             name()
@@ -116,7 +146,7 @@ contract Memberships is ERC721, Ownable {
         NFTDescriptor.TokenURIParams memory params = NFTDescriptor
             .TokenURIParams(
                 tokenId,
-                ownerOf(tokenId),
+                mintedTo(tokenId),
                 nickNameOf(tokenId),
                 organization(),
                 name()
@@ -124,9 +154,50 @@ contract Memberships is ERC721, Ownable {
         return NFTDescriptor.constructTokenURI(params);
     }
 
-    // All transfers DISABLED (contract will still emit standard transfer event on mint and burn)
-    function approve(address to, uint256 tokenId) public pure override {
-        require(false == true, "Memberships: cannot be approved for transfer");
+    // Added isTransferable only
+    function approve(address to, uint256 tokenId)
+        public
+        override
+        isTransferable
+    {
+        address owner = ERC721Upgradeable.ownerOf(tokenId);
+        require(to != owner, "ERC721: approval to current owner");
+
+        require(
+            _msgSender() == owner || isApprovedForAll(owner, _msgSender()),
+            "ERC721: approve caller is not owner nor approved for all"
+        );
+
+        _approve(to, tokenId);
+    }
+
+    // Added isTransferable only
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override isTransferable {
+        //solhint-disable-next-line max-line-length
+        require(
+            _isApprovedOrOwner(_msgSender(), tokenId),
+            "ERC721: transfer caller is not owner nor approved"
+        );
+
+        _transfer(from, to, tokenId);
+    }
+
+    // Added isTransferable only
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory _data
+    ) public override isTransferable {
+        require(
+            _isApprovedOrOwner(_msgSender(), tokenId),
+            "ERC721: transfer caller is not owner nor approved"
+        );
+        _safeTransfer(from, to, tokenId, _data);
     }
 
     //===== Internal Functions =====//
@@ -134,16 +205,14 @@ contract Memberships is ERC721, Ownable {
     function _mint(address to, string calldata nickName) internal {
         uint256 tokenId = _counter.current();
         _nickNames[tokenId] = nickName;
+        _mintedTo[tokenId] = to;
         _safeMint(to, tokenId);
         _counter.increment();
     }
 
-    // All transfers DISABLED (contract will still emit standard transfer event on mint and burn)
-    function _transfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal pure override {
-        require(false == true, "Memberships: cannot be transferred");
+    //===== Modifiers =====//
+    modifier isTransferable() {
+        require(transferable() == true, "Memberships: not transferable");
+        _;
     }
 }
