@@ -6,6 +6,6 @@ export interface ConstructorArguments {
 }
 
 export interface Deployment {
-  address: string;
-  args: ConstructorArguments;
+  factory: string;
+  memberships: string;
 }

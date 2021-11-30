@@ -211,6 +211,7 @@ contract Memberships is Initializable, ERC721Upgradeable, OwnableUpgradeable {
     }
 
     //===== Modifiers =====//
+
     modifier isTransferable() {
         require(transferable() == true, "Memberships: not transferable");
         _;

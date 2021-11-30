@@ -9,10 +9,13 @@ async function main() {
     readFileSync(`${__dirname}/../deployments/${hre.network.name}.json`, "utf8")
   );
   const byteHash = keccak256(MembershipsFactory__factory.bytecode);
-  const address: Deployment = deployments[byteHash];
-  console.log(address);
+  const deployment: Deployment = deployments[byteHash];
   await hre.run("verify:verify", {
-    address,
+    address: deployment.factory,
+    constructorArguments: [],
+  });
+  await hre.run("verify:verify", {
+    address: deployment.memberships,
     constructorArguments: [],
   });
 }

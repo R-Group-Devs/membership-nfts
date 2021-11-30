@@ -6,7 +6,7 @@ import {Memberships} from "./Memberships.sol";
 
 contract MembershipsFactory {
     //===== State =====//
-    address immutable memberships;
+    address public immutable memberships;
 
     //===== Events =====//
 
