@@ -91,9 +91,7 @@ contract Memberships is Initializable, ERC721Upgradeable, OwnableUpgradeable {
         __Ownable_init();
         _organization = organization_;
         _transferable = transferable_;
-        if (msg.sender != owner) {
-            transferOwnership(owner);
-        }
+        transferOwnership(owner);
     }
 
     function mint(address to, string calldata nickName) public onlyOwner {
