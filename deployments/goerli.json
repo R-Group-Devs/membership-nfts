@@ -1,11 +1,7 @@
 {
-  "0xfc78e321c5975634b6eacd4837b12b8672fa7a1ccb748b8fb5a81916a900b46a": {
-    "address": "0x4de8AFCd8beeD6842Bdd317E1D0b8d51A26942A5",
-    "args": {
-      "name": "OG",
-      "symbol": "MSHP",
-      "organization": "R Group",
-      "owner": "0xd50fc49ff389558d23a76Cf246dA147FF53D8Df8"
-    }
+  "0x7d5fad3ffd8f35254d64ae50f072465350ed284213245cf73273c08b65ca52d2": "0x56d6D83163c498c856af7F307682805e589c838D",
+  "0xfdec0998ff2b15ee4e13822dabe04d23c6db9a4325ea4c78552e224f09c9f97b": {
+    "factory": "0xBb6E8783b6e7F88855f2910e34c6cCa382420bC0",
+    "memberships": "0xFc4B189F86a144e6b807F304431EEd4c7b011de9"
   }
 }

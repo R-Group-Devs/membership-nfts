@@ -1,35 +1,89 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { expect } from "chai";
+import { expect, assert } from "chai";
 import { ethers } from "hardhat";
-import { Memberships, Memberships__factory } from "../typechain";
+import { Memberships } from "../typechain/Memberships";
+import { MembershipsFactory } from "../typechain/MembershipsFactory";
+import {
+  MembershipsFactory__factory,
+  Memberships__factory,
+} from "../typechain";
 import {
   tokenName,
   tokenSymbol,
   organization,
+  transferable,
+  createAndCheckProxy,
   mintAndCheck,
   batchMintAndCheck,
   burnAndCheck,
   batchBurnAndCheck,
 } from "./utils";
+import { randomBytes } from "ethers/lib/utils";
 
 const { AddressZero } = ethers.constants;
 
+/**
+ * TODO
+ * - test createMemberships, including all options
+ * - test toggleTransferable
+ * - test transfer / approve / safeTransfer when transferable is active
+ * - verify mintedTo
+ */
+
 describe("Memberships", () => {
   let accounts: SignerWithAddress[];
+  let ownerAddr: string;
+  let factory: MembershipsFactory;
   let memberships: Memberships;
   let wrongOwnerM: Memberships;
 
   beforeEach(async () => {
     accounts = await ethers.getSigners();
-    const mFactory = new Memberships__factory(accounts[0]);
-    memberships = await mFactory.deploy(
+    const fFactory = new MembershipsFactory__factory(accounts[0]);
+    factory = await fFactory.deploy();
+    await factory.deployed();
+    ownerAddr = await accounts[1].getAddress();
+    const address = await createAndCheckProxy(
+      factory,
       tokenName,
       tokenSymbol,
       organization,
-      await accounts[0].getAddress()
+      transferable,
+      ownerAddr
     );
-    wrongOwnerM = memberships.connect(await accounts[1].getAddress());
+    const mFactory = new Memberships__factory(accounts[1]);
+    memberships = mFactory.attach(address);
+    wrongOwnerM = memberships.connect(await accounts[0].getAddress());
+  });
+
+  describe("create new memberships", () => {
+    it.skip("can't create a new proxy with identical inputs to an existing one", async () => {
+      // looks like it does allow this now, but not sure that's a problem
+    });
+
+    it("can create a new proxy that is NOT transferable", async () => {
+      await createAndCheckProxy(
+        factory,
+        tokenName,
+        tokenSymbol,
+        organization,
+        true,
+        ownerAddr
+      );
+    });
+  });
+
+  describe("toggleTransferable", () => {
+    it("toggles transferable", async () => {
+      const transferable = await memberships.transferable();
+      await expect(memberships.toggleTransferable())
+        .to.emit(memberships, "ToggleTransferable")
+        .withArgs(!transferable);
+      await expect(memberships.toggleTransferable())
+        .to.emit(memberships, "ToggleTransferable")
+        .withArgs(transferable);
+    });
   });
 
   describe("mint", () => {
@@ -128,7 +182,7 @@ describe("Memberships", () => {
         memberships
       );
       await expect(
-        wrongOwnerM.burn(await memberships.lastId())
+        wrongOwnerM.burn((await memberships.nextId()).sub(1))
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
   });
@@ -164,7 +218,7 @@ describe("Memberships", () => {
         addresses,
         memberships
       );
-      const lastTokenId = await memberships.lastId();
+      const lastTokenId = (await memberships.nextId()).sub(1);
       const tokenIds: BigNumber[] = [];
       for (let i = 0; i < addresses.length; i++) {
         tokenIds.push(lastTokenId.sub(i));
@@ -175,29 +229,96 @@ describe("Memberships", () => {
     });
   });
 
-  describe("approve / transfer", () => {
-    it("doesn't allow approval of tokens for transfer", async () => {
-      await mintAndCheck("Alice", await accounts[0].getAddress(), memberships);
-      await expect(
-        memberships.approve(
-          await accounts[1].getAddress(),
-          await memberships.lastId()
-        )
-      ).to.be.revertedWith("Memberships: cannot be approved for transfer");
-    });
-
-    it("doesn't allow transferFrom", async () => {
+  describe("approve, transfer, safeTransferFrom", () => {
+    it("doesn't allow approve, transferFrom, or safeTransferFrom if transferable is false", async () => {
       const aliceAddr = await accounts[0].getAddress();
+      const bobAddr = await accounts[1].getAddress();
       await mintAndCheck("Alice", aliceAddr, memberships);
-      const tokenId = await memberships.lastId();
+      const tokenId = (await memberships.nextId()).sub(1);
+
+      await expect(memberships.approve(bobAddr, tokenId)).to.be.revertedWith(
+        "Memberships: not transferable"
+      );
 
       await expect(
-        memberships.transferFrom(
+        memberships.transferFrom(aliceAddr, bobAddr, tokenId)
+      ).to.be.revertedWith("Memberships: not transferable");
+
+      await expect(
+        memberships.callStatic["safeTransferFrom(address,address,uint256)"](
           aliceAddr,
-          await accounts[1].getAddress(),
+          bobAddr,
           tokenId
         )
-      ).to.be.revertedWith("Memberships: cannot be transferred");
+      ).to.be.revertedWith("Memberships: not transferable");
+
+      await expect(
+        memberships.callStatic[
+          "safeTransferFrom(address,address,uint256,bytes)"
+        ](aliceAddr, bobAddr, tokenId, randomBytes(5))
+      ).to.be.revertedWith("Memberships: not transferable");
+    });
+
+    it("does allow approve, transferFrom, and safeTransferFrom is transferable is true", async () => {
+      const address = await createAndCheckProxy(
+        factory,
+        tokenName,
+        tokenSymbol,
+        organization,
+        true,
+        ownerAddr
+      );
+
+      const mFactory = new Memberships__factory(accounts[1]);
+      const bobMemberships = mFactory.attach(address);
+
+      const aliceAddr = await accounts[0].getAddress();
+      const aliceMemberships = bobMemberships.connect(accounts[0]);
+
+      const bobAddr = await accounts[1].getAddress();
+      await mintAndCheck("Bob", bobAddr, bobMemberships);
+      const tokenId = (await bobMemberships.nextId()).sub(1);
+
+      await expect(bobMemberships.approve(aliceAddr, tokenId))
+        .to.emit(bobMemberships, "Approval")
+        .withArgs(bobAddr, aliceAddr, tokenId);
+
+      assert.equal(
+        await bobMemberships.getApproved(tokenId),
+        aliceAddr,
+        "approval"
+      );
+
+      await expect(bobMemberships.transferFrom(bobAddr, aliceAddr, tokenId))
+        .to.emit(bobMemberships, "Transfer")
+        .withArgs(bobAddr, aliceAddr, tokenId);
+
+      assert.equal(await bobMemberships.ownerOf(tokenId), aliceAddr, "owner");
+
+      await expect(
+        aliceMemberships["safeTransferFrom(address,address,uint256)"](
+          aliceAddr,
+          bobAddr,
+          tokenId
+        )
+      )
+        .to.emit(aliceMemberships, "Transfer")
+        .withArgs(aliceAddr, bobAddr, tokenId);
+
+      assert.equal(await bobMemberships.ownerOf(tokenId), bobAddr, "owner");
+
+      await expect(
+        bobMemberships["safeTransferFrom(address,address,uint256,bytes)"](
+          bobAddr,
+          aliceAddr,
+          tokenId,
+          randomBytes(1)
+        )
+      )
+        .to.emit(bobMemberships, "Transfer")
+        .withArgs(bobAddr, aliceAddr, tokenId);
+
+      assert.equal(await bobMemberships.ownerOf(tokenId), aliceAddr, "owner");
     });
   });
 });

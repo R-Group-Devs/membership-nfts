@@ -2,10 +2,10 @@ export interface ConstructorArguments {
   name: string;
   symbol: string;
   organization: string;
-  owner: string;
+  transferable: boolean;
 }
 
 export interface Deployment {
-  address: string;
-  args: ConstructorArguments;
+  factory: string;
+  memberships: string;
 }

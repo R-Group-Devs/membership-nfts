@@ -2,7 +2,12 @@
 
 Ownable, burnable, mintable, non-transferable NFTs fit for use as reputation-based voting power
 
-## Experiment plan
+## Possible future features
+
+- [x] Allow owner to activate + deactivate transferability
+- [x] Add permanent "mintedFor" address to token metadata, so potentially could allow transferability but only grant voting power when the mintedFor address is the owner
+
+## Plan
 
 Testnet phase
 
